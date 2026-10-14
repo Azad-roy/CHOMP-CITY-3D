@@ -1,0 +1,2324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>CHOMP CITY 3D - Tactile Toycore Swallower</title>
+  <style>
+    /* -------------------------------------------------------------
+       TACTILE TOYCORE STYLING & HUD
+       Palette: Coral (#FF5E5B), Butter Yellow (#FFED66),
+       Mint (#00CECB), Warm Cream (#FDFBF7)
+    -------------------------------------------------------------- */
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #FDFBF7;
+      font-family: 'Fredoka', 'Quicksand', system-ui, sans-serif;
+      color: #2D3748;
+    }
+
+    #game-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #game-canvas:active {
+      cursor: grabbing;
+    }
+
+    /* ---------------- HUD OVERLAYS ---------------- */
+    #ui-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    /* Pill Badges with Tactile Clay/Toy Styling */
+    .toy-pill {
+      background: rgba(253, 251, 247, 0.92);
+      backdrop-filter: blur(12px);
+      border: 3px solid #2D3748;
+      box-shadow: 0 6px 0 #2D3748, 0 10px 20px rgba(0,0,0,0.1);
+      border-radius: 999px;
+      padding: 10px 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: auto;
+      transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .toy-pill:hover {
+      transform: translateY(-2px);
+    }
+
+    .timer-badge {
+      border-color: #FF5E5B;
+      box-shadow: 0 6px 0 #D93835, 0 10px 20px rgba(255, 94, 91, 0.2);
+    }
+
+    .timer-badge.urgent {
+      animation: pulseAlert 0.5s infinite alternate;
+      border-color: #FF0055;
+      background: #FFE5E5;
+    }
+
+    @keyframes pulseAlert {
+      from { transform: scale(1); }
+      to { transform: scale(1.08); }
+    }
+
+    .score-badge {
+      border-color: #00CECB;
+      box-shadow: 0 6px 0 #009B98, 0 10px 20px rgba(0, 206, 203, 0.2);
+    }
+
+    .label {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #718096;
+    }
+
+    .value {
+      font-size: 26px;
+      font-weight: 700;
+      color: #1A202C;
+    }
+
+    .score-value {
+      color: #009B98;
+    }
+
+    .timer-value {
+      color: #FF5E5B;
+    }
+
+    /* Controls cluster (Sound / Pause) */
+    .controls-cluster {
+      display: flex;
+      gap: 12px;
+    }
+
+    .toy-btn {
+      background: #FFED66;
+      border: 3px solid #2D3748;
+      box-shadow: 0 5px 0 #2D3748;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      cursor: pointer;
+      pointer-events: auto;
+      outline: none;
+      transition: all 0.12s ease;
+    }
+
+    .toy-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 7px 0 #2D3748;
+    }
+
+    .toy-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #2D3748;
+    }
+
+    /* Combo Banner */
+    #combo-container {
+      position: absolute;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%) scale(0);
+      background: #FFED66;
+      border: 3px solid #2D3748;
+      box-shadow: 0 6px 0 #2D3748;
+      border-radius: 20px;
+      padding: 6px 20px;
+      font-size: 20px;
+      font-weight: 700;
+      color: #2D3748;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #combo-container.active {
+      transform: translateX(-50%) scale(1);
+    }
+
+    /* Mega Swallow Shockwave Banner */
+    #mega-banner {
+      position: absolute;
+      top: 35%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: linear-gradient(135deg, #FF5E5B, #FFED66);
+      border: 5px solid #2D3748;
+      box-shadow: 0 12px 0 #2D3748, 0 20px 40px rgba(0,0,0,0.3);
+      border-radius: 30px;
+      padding: 16px 36px;
+      font-size: 34px;
+      font-weight: 700;
+      color: #FFFFFF;
+      text-shadow: 0 3px 0 #2D3748;
+      text-align: center;
+      pointer-events: none;
+      z-index: 50;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+    }
+
+    #mega-banner.show {
+      transform: translate(-50%, -50%) scale(1.1);
+      opacity: 1;
+    }
+
+    #mega-banner .mega-sub {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2D3748;
+      text-shadow: none;
+      margin-top: 4px;
+    }
+
+    /* Bottom Growth & Milestone Meter */
+    .bottom-bar {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .level-label {
+      font-size: 15px;
+      font-weight: 700;
+      color: #2D3748;
+      background: #FFFFFF;
+      border: 2px solid #2D3748;
+      padding: 4px 16px;
+      border-radius: 999px;
+      box-shadow: 0 3px 0 #2D3748;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-bar-outer {
+      width: 100%;
+      height: 22px;
+      background: #FFFFFF;
+      border: 3px solid #2D3748;
+      border-radius: 999px;
+      box-shadow: 0 5px 0 #2D3748;
+      overflow: hidden;
+      padding: 2px;
+      position: relative;
+    }
+
+    .progress-bar-inner {
+      height: 100%;
+      width: 15%;
+      background: linear-gradient(90deg, #00CECB, #FFED66, #FF5E5B);
+      border-radius: 999px;
+      transition: width 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* ---------------- MODALS (START / GAME OVER) ---------------- */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(253, 251, 247, 0.85);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 1;
+      visibility: visible;
+      transition: all 0.3s ease;
+      padding: 20px;
+    }
+
+    .modal-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .modal-card {
+      background: #FFFFFF;
+      border: 4px solid #2D3748;
+      border-radius: 36px;
+      box-shadow: 0 16px 0 #2D3748, 0 25px 50px rgba(0,0,0,0.15);
+      padding: 40px;
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .game-logo {
+      font-size: 42px;
+      font-weight: 700;
+      line-height: 1.1;
+      color: #FF5E5B;
+      text-shadow: 0 4px 0 #2D3748;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .game-logo span {
+      font-size: 20px;
+      color: #00CECB;
+      text-shadow: none;
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+
+    .info-box {
+      background: #F8FAFC;
+      border: 3px dashed #CBD5E1;
+      border-radius: 20px;
+      padding: 18px 24px;
+      text-align: left;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #475569;
+      width: 100%;
+    }
+
+    .info-box strong {
+      color: #2D3748;
+    }
+
+    .btn-play {
+      background: #00CECB;
+      border: 4px solid #2D3748;
+      box-shadow: 0 8px 0 #2D3748;
+      border-radius: 999px;
+      padding: 16px 48px;
+      font-family: inherit;
+      font-size: 24px;
+      font-weight: 700;
+      color: #FFFFFF;
+      text-shadow: 0 2px 0 #2D3748;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-play:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 11px 0 #2D3748;
+      background: #00BFBC;
+    }
+
+    .btn-play:active {
+      transform: translateY(4px);
+      box-shadow: 0 4px 0 #2D3748;
+    }
+
+    /* Stats Grid for Game Over */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      width: 100%;
+    }
+
+    .stat-tile {
+      background: #FDFBF7;
+      border: 3px solid #2D3748;
+      border-radius: 18px;
+      padding: 12px;
+      box-shadow: 0 4px 0 #2D3748;
+    }
+
+    .stat-tile .num {
+      font-size: 26px;
+      font-weight: 700;
+      color: #FF5E5B;
+    }
+
+    .star-rating {
+      font-size: 36px;
+      color: #FFED66;
+      text-shadow: 0 3px 0 #2D3748;
+      display: flex;
+      gap: 6px;
+    }
+
+    /* Floating point notifications */
+    .floating-popup {
+      position: absolute;
+      pointer-events: none;
+      font-weight: 700;
+      font-size: 18px;
+      color: #00CECB;
+      text-shadow: 0 2px 0 #2D3748;
+      transform: translate(-50%, -50%);
+      transition: transform 0.8s ease-out, opacity 0.8s ease-out;
+      z-index: 40;
+    }
+  </style>
+
+  <!-- Pinned Three.js r160 via CDN Import Map as strictly required -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="ui-container">
+    <!-- Top HUD Bar -->
+    <div class="top-bar">
+      <!-- Timer -->
+      <div class="toy-pill timer-badge" id="timer-pill">
+        <span>⏳</span>
+        <div>
+          <div class="label">Time Left</div>
+          <div class="value timer-value" id="timer-display">60s</div>
+        </div>
+      </div>
+
+      <!-- Score -->
+      <div class="toy-pill score-badge">
+        <span>⭐</span>
+        <div>
+          <div class="label">City Score</div>
+          <div class="value score-value" id="score-display">0</div>
+        </div>
+      </div>
+
+      <!-- Audio & Control Buttons -->
+      <div class="controls-cluster">
+        <button class="toy-btn" id="btn-audio" title="Toggle Sound">🔊</button>
+        <button class="toy-btn" id="btn-pause" title="Pause Game">⏸️</button>
+      </div>
+    </div>
+
+    <!-- Active Combo Badge -->
+    <div id="combo-container">
+      <span>🔥</span> <span id="combo-text">COMBO x2!</span>
+    </div>
+
+    <!-- Mega Swallow Banner -->
+    <div id="mega-banner">
+      <div>💥 MEGA SWALLOW! 💥</div>
+      <div class="mega-sub">+500 BONUS POINTS!</div>
+    </div>
+
+    <!-- Bottom Tier & Growth Bar -->
+    <div class="bottom-bar">
+      <div class="level-label" id="level-label">
+        <span>🌀</span> <span id="tier-name">TIER 1: POCKET HOLE</span>
+      </div>
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="progress-bar-inner"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- START MODAL -->
+  <div class="modal-overlay" id="start-modal">
+    <div class="modal-card">
+      <div class="game-logo">
+        CHOMP CITY 3D
+        <span>TACTILE TOY DIORAMA</span>
+      </div>
+
+      <div class="info-box">
+        🕹️ <strong>HOW TO PLAY:</strong><br>
+        • <strong>Drag Mouse / Touch</strong> to steer your glowing gravity hole.<br>
+        • Swallow smaller props (cones, ducks, bushes) to grow your ring.<br>
+        • As you grow, swallow cars, trees, cozy houses, and skyscrapers!<br>
+        • Build combos for <strong>ascending marimba chimes</strong>.<br>
+        • Every 10 objects triggers a slow-mo <strong>MEGA SWALLOW</strong> shockwave!
+      </div>
+
+      <button class="btn-play" id="btn-start">
+        <span>LET'S CHOMP!</span> ➔
+      </button>
+    </div>
+  </div>
+
+  <!-- GAME OVER MODAL -->
+  <div class="modal-overlay hidden" id="game-over-modal">
+    <div class="modal-card">
+      <div class="game-logo">
+        TIME'S UP!
+        <span id="game-over-verdict">DIORAMA DEVOURER!</span>
+      </div>
+
+      <div class="star-rating" id="star-rating">
+        <span>⭐</span><span>⭐</span><span>⭐</span>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-tile">
+          <div class="label">Final Score</div>
+          <div class="num" id="stat-final-score">0</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">Objects Eaten</div>
+          <div class="num" id="stat-eaten">0</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">Max Combo</div>
+          <div class="num" id="stat-combo">x1</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">Final Tier</div>
+          <div class="num" id="stat-tier">Tier 1</div>
+        </div>
+      </div>
+
+      <button class="btn-play" id="btn-replay">
+        <span>PLAY AGAIN</span> 🔄
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN THREE.JS SIMULATION MODULE -->
+  <script type="module">
+    import * as THREE from 'three';
+
+    /* =====================================================================
+       1. SOUND SYNTHESIS ENGINE (Web Audio API - Zero External Files)
+       Generates joyful marimba kalimba chimes, bloops, and sub-bass shockwaves
+    ===================================================================== */
+    class ToyAudio {
+      constructor() {
+        this.ctx = null;
+        this.isMuted = false;
+        // Pentatonic Scale C4 -> C6 for cheerful harmonic progression
+        this.pentatonic = [
+          261.63, 293.66, 329.63, 392.00, 440.00, // C4 D4 E4 G4 A4
+          523.25, 587.33, 659.25, 783.99, 880.00, // C5 D5 E5 G5 A5
+          1046.50, 1174.66, 1318.51, 1567.98, 1760.00, // C6 D6 E6 G6 A6
+          2093.00 // C7
+        ];
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+          this.masterGain.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      toggleMute() {
+        this.isMuted = !this.isMuted;
+        if (this.masterGain) {
+          this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.35, this.ctx.currentTime);
+        }
+        return this.isMuted;
+      }
+
+      // Marimba Pop / Combo Melodic Note
+      playMarimba(comboIndex = 0) {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const noteIdx = Math.min(comboIndex, this.pentatonic.length - 1);
+        const freq = this.pentatonic[noteIdx];
+
+        // Primary wooden mallet tone (sine)
+        const osc1 = this.ctx.createOscillator();
+        const gain1 = this.ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(freq, now);
+
+        // Overtone click (triangle)
+        const osc2 = this.ctx.createOscillator();
+        const gain2 = this.ctx.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(freq * 2.0, now);
+
+        // Envelope
+        gain1.gain.setValueAtTime(0.7, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+        gain2.gain.setValueAtTime(0.4, now);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+        osc1.connect(gain1);
+        osc2.connect(gain2);
+        gain1.connect(this.masterGain);
+        gain2.connect(this.masterGain);
+
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 0.23);
+        osc2.stop(now + 0.09);
+      }
+
+      // Juicy Suction Bloop
+      playBloop() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(450, now);
+        osc.frequency.exponentialRampToValueAtTime(140, now + 0.14);
+
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      }
+
+      // Slow-Mo Mega Swallow Sub-Bass Shockwave
+      playMegaBoom() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        // Sub bass drop
+        const sub = this.ctx.createOscillator();
+        const subGain = this.ctx.createGain();
+        sub.type = 'sine';
+        sub.frequency.setValueAtTime(160, now);
+        sub.frequency.exponentialRampToValueAtTime(32, now + 0.6);
+
+        subGain.gain.setValueAtTime(0.9, now);
+        subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+
+        sub.connect(subGain);
+        subGain.connect(this.masterGain);
+        sub.start(now);
+        sub.stop(now + 0.75);
+
+        // Sparkling burst chord
+        [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+          const chime = this.ctx.createOscillator();
+          const chimeGain = this.ctx.createGain();
+          chime.type = 'triangle';
+          chime.frequency.setValueAtTime(f, now + i * 0.04);
+          chimeGain.gain.setValueAtTime(0.3, now + i * 0.04);
+          chimeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          chime.connect(chimeGain);
+          chimeGain.connect(this.masterGain);
+          chime.start(now + i * 0.04);
+          chime.stop(now + 0.5);
+        });
+      }
+
+      // Level Up Arpeggio
+      playLevelUp() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const notes = [440, 554.37, 659.25, 880]; // A major
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+          gain.gain.setValueAtTime(0.4, now + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+          osc.connect(gain);
+          gain.connect(this.masterGain);
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.32);
+        });
+      }
+
+      // Rubbery Bonk for objects too big
+      playBonk() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(110, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.09);
+      }
+    }
+
+    const sound = new ToyAudio();
+
+    /* =====================================================================
+       2. THREE.JS SCENE SETUP & LIGHTING
+       Tactile Toycore Palette, PCFSoftShadows, Studio Rims
+    ===================================================================== */
+    const canvas = document.getElementById('game-canvas');
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xFDFBF7); // Clean warm cream diorama backdrop
+    scene.fog = new THREE.FogExp2(0xFDFBF7, 0.008);
+
+    // Camera: High-angle 50-degree isometric follow camera
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.5, 300);
+    const cameraTarget = new THREE.Vector3(0, 0, 0);
+
+    // Studio Lighting
+    const ambientLight = new THREE.HemisphereLight(0xFFF9F0, 0xD0D7DE, 0.75);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xFFF6EA, 1.6);
+    keyLight.position.set(40, 65, 30);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.camera.near = 10;
+    keyLight.shadow.camera.far = 160;
+    keyLight.shadow.camera.left = -45;
+    keyLight.shadow.camera.right = 45;
+    keyLight.shadow.camera.top = 45;
+    keyLight.shadow.camera.bottom = -45;
+    keyLight.shadow.bias = -0.0004;
+    keyLight.shadow.radius = 2.5; // Soft toy studio shadow edges
+    scene.add(keyLight);
+
+    // Rim / Fill Light for tactile plastic specular reflections
+    const fillLight = new THREE.DirectionalLight(0xE0F2FE, 0.7);
+    fillLight.position.set(-35, 30, -40);
+    scene.add(fillLight);
+
+    /* =====================================================================
+       3. TACTILE TOY MATERIAL PALETTE & PROCEDURAL GROUND CANVAS
+    ===================================================================== */
+    const Materials = {
+      coral: new THREE.MeshStandardMaterial({ color: 0xFF5E5B, roughness: 0.25, metalness: 0.05 }),
+      yellow: new THREE.MeshStandardMaterial({ color: 0xFFED66, roughness: 0.22, metalness: 0.05 }),
+      mint: new THREE.MeshStandardMaterial({ color: 0x00CECB, roughness: 0.22, metalness: 0.05 }),
+      cream: new THREE.MeshStandardMaterial({ color: 0xFDFBF7, roughness: 0.35, metalness: 0.02 }),
+      white: new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.2, metalness: 0.05 }),
+      slate: new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.35, metalness: 0.1 }),
+      glass: new THREE.MeshStandardMaterial({ color: 0xBAE6FD, roughness: 0.1, metalness: 0.2 }),
+      orange: new THREE.MeshStandardMaterial({ color: 0xFB923C, roughness: 0.25, metalness: 0.05 }),
+      wood: new THREE.MeshStandardMaterial({ color: 0x92400E, roughness: 0.45, metalness: 0.02 }),
+      green: new THREE.MeshStandardMaterial({ color: 0x10B981, roughness: 0.3, metalness: 0.05 }),
+      lavender: new THREE.MeshStandardMaterial({ color: 0xC084FC, roughness: 0.25, metalness: 0.05 }),
+      pink: new THREE.MeshStandardMaterial({ color: 0xF472B6, roughness: 0.25, metalness: 0.05 }),
+      silver: new THREE.MeshStandardMaterial({ color: 0xE2E8F0, roughness: 0.15, metalness: 0.6 }),
+      emissiveBulb: new THREE.MeshBasicMaterial({ color: 0xFFED66 }),
+      voidDark: new THREE.MeshBasicMaterial({ color: 0x090515, side: THREE.BackSide }),
+      ringGlow: new THREE.MeshStandardMaterial({
+        color: 0x00CECB,
+        emissive: 0x00CECB,
+        emissiveIntensity: 0.6,
+        roughness: 0.15,
+        metalness: 0.1
+      })
+    };
+
+    // Generate Diorama Map Canvas Texture (Streets, Crosswalks, Parks, Plazas)
+    function createCityCanvasTexture() {
+      const cvs = document.createElement('canvas');
+      cvs.width = 2048;
+      cvs.height = 2048;
+      const ctx = cvs.getContext('2d');
+
+      // Base warm cream ground
+      ctx.fillStyle = '#FDFBF7';
+      ctx.fillRect(0, 0, 2048, 2048);
+
+      // Subtle diorama tile grid lines
+      ctx.strokeStyle = '#F1ECE1';
+      ctx.lineWidth = 3;
+      const step = 64;
+      for (let x = 0; x <= 2048; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 2048);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, x);
+        ctx.lineTo(2048, x);
+        ctx.stroke();
+      }
+
+      // Soft pastel grass park quadrants
+      ctx.fillStyle = '#DCFCE7';
+      ctx.beginPath();
+      ctx.roundRect(1150, 150, 750, 750, 80);
+      ctx.fill();
+
+      // Residential block grass lawns
+      ctx.fillStyle = '#FEF3C7';
+      ctx.beginPath();
+      ctx.roundRect(150, 1150, 750, 750, 80);
+      ctx.fill();
+
+      // Road Network (Warm toy slate-grey lanes)
+      ctx.fillStyle = '#E2E8F0';
+      const roads = [
+        [940, 0, 168, 2048], // Central N-S Avenue
+        [0, 940, 2048, 168], // Central E-W Avenue
+        [460, 0, 130, 2048], // West N-S Street
+        [1460, 0, 130, 2048], // East N-S Street
+        [0, 460, 2048, 130], // North E-W Street
+        [0, 1460, 2048, 130]  // South E-W Street
+      ];
+
+      roads.forEach(([rx, ry, rw, rh]) => {
+        ctx.fillRect(rx, ry, rw, rh);
+      });
+
+      // Road Curbs / Edges
+      ctx.strokeStyle = '#CBD5E1';
+      ctx.lineWidth = 6;
+      roads.forEach(([rx, ry, rw, rh]) => {
+        ctx.strokeRect(rx, ry, rw, rh);
+      });
+
+      // Yellow & White Dashed Street Centerlines
+      ctx.strokeStyle = '#FFED66';
+      ctx.lineWidth = 6;
+      ctx.setLineDash([28, 28]);
+      ctx.beginPath();
+      // N-S centers
+      ctx.moveTo(1024, 0); ctx.lineTo(1024, 2048);
+      ctx.moveTo(525, 0); ctx.lineTo(525, 2048);
+      ctx.moveTo(1525, 0); ctx.lineTo(1525, 2048);
+      // E-W centers
+      ctx.moveTo(0, 1024); ctx.lineTo(2048, 1024);
+      ctx.moveTo(0, 525); ctx.lineTo(2048, 525);
+      ctx.moveTo(0, 1525); ctx.lineTo(2048, 1525);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Central Town Plaza Circle
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(1024, 1024, 240, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#00CECB';
+      ctx.lineWidth = 10;
+      ctx.stroke();
+
+      // Crosswalk stripes at intersections
+      ctx.fillStyle = '#FFFFFF';
+      function drawCrosswalk(cx, cy, horiz = true) {
+        for (let i = -4; i <= 4; i++) {
+          if (horiz) {
+            ctx.fillRect(cx + i * 16, cy - 40, 10, 80);
+          } else {
+            ctx.fillRect(cx - 40, cy + i * 16, 80, 10);
+          }
+        }
+      }
+      drawCrosswalk(1024, 760, true);
+      drawCrosswalk(1024, 1288, true);
+      drawCrosswalk(760, 1024, false);
+      drawCrosswalk(1288, 1024, false);
+
+      const texture = new THREE.CanvasTexture(cvs);
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      return texture;
+    }
+
+    const cityGroundTexture = createCityCanvasTexture();
+
+    /* =====================================================================
+       4. THE DYNAMIC HOLE CUTOUT SHADER & VOID WELL
+       Discards ground fragments inside player ring radius so objects fall in!
+    ===================================================================== */
+    const groundMaterial = new THREE.MeshStandardMaterial({
+      map: cityGroundTexture,
+      roughness: 0.35,
+      metalness: 0.05
+    });
+
+    // Custom onBeforeCompile to punch a realtime circular hole
+    groundMaterial.onBeforeCompile = (shader) => {
+      shader.uniforms.uHolePos = { value: new THREE.Vector2(0, 0) };
+      shader.uniforms.uHoleRadius = { value: 1.2 };
+      groundMaterial.userData.shader = shader;
+
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        `#include <common>
+        varying vec3 vWorldPosition;`
+      ).replace(
+        '#include <worldpos_vertex>',
+        `#include <worldpos_vertex>
+        vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;`
+      );
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <common>',
+        `#include <common>
+        varying vec3 vWorldPosition;
+        uniform vec2 uHolePos;
+        uniform float uHoleRadius;`
+      ).replace(
+        '#include <clipping_planes_fragment>',
+        `#include <clipping_planes_fragment>
+        float d = distance(vWorldPosition.xz, uHolePos);
+        if (d < uHoleRadius) {
+          discard;
+        }`
+      );
+    };
+
+    // Ground Plane Mesh
+    const groundPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(130, 130),
+      groundMaterial
+    );
+    groundPlane.rotation.x = -Math.PI / 2;
+    groundPlane.receiveShadow = true;
+    scene.add(groundPlane);
+
+    /* =====================================================================
+       5. PLAYER HOLE ENTITY & GLOWING GRAVITY RING
+    ===================================================================== */
+    const playerHole = {
+      position: new THREE.Vector3(0, 0, 0),
+      velocity: new THREE.Vector3(0, 0, 0),
+      radius: 1.2,
+      targetRadius: 1.2,
+      tier: 1,
+      growthProgress: 0,
+      totalSwallowed: 0,
+      score: 0,
+      combo: 0,
+      comboTimer: 0,
+      maxCombo: 0,
+      largestSwallowed: 'Traffic Cone'
+    };
+
+    // Outer Beveled Glowing Gravity Rim (Torus)
+    const rimGeometry = new THREE.TorusGeometry(1, 0.12, 16, 64);
+    const rimMesh = new THREE.Mesh(rimGeometry, Materials.ringGlow);
+    rimMesh.rotation.x = Math.PI / 2;
+    rimMesh.position.y = 0.06;
+    scene.add(rimMesh);
+
+    // Inner Spinning Suction Energy Disk
+    const innerRingGeom = new THREE.RingGeometry(0.7, 0.98, 48);
+    const innerRingMat = new THREE.MeshBasicMaterial({
+      color: 0xFFED66,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.65
+    });
+    const innerRingMesh = new THREE.Mesh(innerRingGeom, innerRingMat);
+    innerRingMesh.rotation.x = -Math.PI / 2;
+    innerRingMesh.position.y = 0.03;
+    scene.add(innerRingMesh);
+
+    // Bottomless Void Pit Cylinder (Attached below hole, moves with player)
+    const voidCylinderGeom = new THREE.CylinderGeometry(1, 0.65, 7, 32, 1, true);
+    const voidPitMesh = new THREE.Mesh(voidCylinderGeom, Materials.voidDark);
+    voidPitMesh.position.set(0, -3.5, 0);
+    scene.add(voidPitMesh);
+
+    // Expanding Shockwave Ring for MEGA SWALLOW
+    const shockwaveGeom = new THREE.RingGeometry(0.8, 1.2, 48);
+    const shockwaveMat = new THREE.MeshBasicMaterial({
+      color: 0x00CECB,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0
+    });
+    const shockwaveMesh = new THREE.Mesh(shockwaveGeom, shockwaveMat);
+    shockwaveMesh.rotation.x = -Math.PI / 2;
+    shockwaveMesh.position.y = 0.08;
+    scene.add(shockwaveMesh);
+
+    let shockwaveState = { active: false, scale: 1, maxScale: 4.5, opacity: 0 };
+
+    /* =====================================================================
+       6. PROCEDURAL KITBASH GENERATOR (Zero External Models)
+       Crafting 24 unique toycore diorama props across 5 size tiers
+    ===================================================================== */
+    const propsList = [];
+
+    // Helper: Wrap procedural geometry components into an interactive Prop
+    function registerProp(group, tier, radius, points, name) {
+      group.traverse(child => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      scene.add(group);
+
+      const propData = {
+        mesh: group,
+        tier: tier,
+        radius: radius,
+        points: points,
+        name: name,
+        state: 'IDLE', // 'IDLE', 'WOBBLE', 'SWALLOWING', 'CONSUMED'
+        fallProgress: 0,
+        originalPos: group.position.clone(),
+        originalRot: group.rotation.clone(),
+        originalScale: group.scale.clone(),
+        wobbleOffset: Math.random() * 10
+      };
+      propsList.push(propData);
+      return propData;
+    }
+
+    // --- TIER 1 PROPS (Tiny, Radius 0.35 - 0.65, ~15-25 pts) ---
+    function buildTrafficCone(x, z) {
+      const g = new THREE.Group();
+      // Base plate
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 0.42), Materials.coral);
+      base.position.y = 0.03;
+      g.add(base);
+      // Cone
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.55, 12), Materials.coral);
+      cone.position.y = 0.32;
+      g.add(cone);
+      // White reflective band
+      const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.12, 12), Materials.white);
+      stripe.position.y = 0.28;
+      g.add(stripe);
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 1, 0.4, 20, 'Traffic Cone');
+    }
+
+    function buildFireHydrant(x, z) {
+      const g = new THREE.Group();
+      // Barrel
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.2, 0.55, 12), Materials.coral);
+      barrel.position.y = 0.27;
+      g.add(barrel);
+      // Cap dome
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 8), Materials.coral);
+      cap.position.y = 0.55;
+      g.add(cap);
+      // Side bolts
+      const bolt1 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.14, 8), Materials.yellow);
+      bolt1.rotation.z = Math.PI / 2;
+      bolt1.position.set(0.18, 0.35, 0);
+      g.add(bolt1);
+      const bolt2 = bolt1.clone();
+      bolt2.position.set(-0.18, 0.35, 0);
+      g.add(bolt2);
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 1, 0.42, 25, 'Fire Hydrant');
+    }
+
+    function buildRubberDuck(x, z) {
+      const g = new THREE.Group();
+      // Body
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10), Materials.yellow);
+      body.scale.set(1.2, 0.9, 1.0);
+      body.position.y = 0.2;
+      g.add(body);
+      // Head
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), Materials.yellow);
+      head.position.set(0.14, 0.36, 0);
+      g.add(head);
+      // Beak
+      const beak = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.14, 8), Materials.coral);
+      beak.rotation.z = -Math.PI / 2;
+      beak.position.set(0.28, 0.34, 0);
+      g.add(beak);
+      // Mint Bow
+      const bow = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.03, 8, 12), Materials.mint);
+      bow.position.set(0.05, 0.3, 0);
+      g.add(bow);
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 1, 0.4, 30, 'Rubber Duck');
+    }
+
+    function buildParkBench(x, z, rot = 0) {
+      const g = new THREE.Group();
+      // Wooden Slats
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.32), Materials.wood);
+      seat.position.y = 0.25;
+      g.add(seat);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.28, 0.06), Materials.wood);
+      back.position.set(0, 0.42, -0.14);
+      g.add(back);
+      // Mint Metal legs
+      const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.28, 0.32), Materials.mint);
+      leg1.position.set(-0.38, 0.14, 0);
+      g.add(leg1);
+      const leg2 = leg1.clone();
+      leg2.position.set(0.38, 0.14, 0);
+      g.add(leg2);
+
+      g.position.set(x, 0, z);
+      g.rotation.y = rot;
+      return registerProp(g, 1, 0.55, 35, 'Park Bench');
+    }
+
+    function buildMailbox(x, z) {
+      const g = new THREE.Group();
+      // Post
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.6, 8), Materials.wood);
+      post.position.y = 0.3;
+      g.add(post);
+      // Box
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.45), Materials.mint);
+      box.position.set(0, 0.65, 0);
+      g.add(box);
+      // Flag
+      const flag = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.12, 0.08), Materials.coral);
+      flag.position.set(0.16, 0.72, -0.05);
+      g.add(flag);
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 1, 0.45, 30, 'Mailbox');
+    }
+
+    function buildFlowerBush(x, z) {
+      const g = new THREE.Group();
+      // Clusters of mint and green spheres
+      const colors = [Materials.green, Materials.mint, Materials.green];
+      for (let i = 0; i < 4; i++) {
+        const rad = 0.25 + Math.random() * 0.12;
+        const sphere = new THREE.Mesh(new THREE.SphereGeometry(rad, 10, 8), colors[i % 3]);
+        sphere.position.set(
+          (Math.random() - 0.5) * 0.3,
+          rad * 0.9,
+          (Math.random() - 0.5) * 0.3
+        );
+        g.add(sphere);
+      }
+      // Bright flower specks
+      for (let f = 0; f < 3; f++) {
+        const fl = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), Materials.yellow);
+        fl.position.set((Math.random() - 0.5) * 0.35, 0.35 + Math.random() * 0.1, (Math.random() - 0.5) * 0.35);
+        g.add(fl);
+      }
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 1, 0.48, 25, 'Flower Bush');
+    }
+
+    // --- TIER 2 PROPS (Small, Radius 0.8 - 1.4, ~50-80 pts) ---
+    function buildStreetLamp(x, z) {
+      const g = new THREE.Group();
+      // Dark slate pole
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 2.2, 8), Materials.slate);
+      pole.position.y = 1.1;
+      g.add(pole);
+      // Arched top arm
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.06, 0.06), Materials.slate);
+      arm.position.set(0.18, 2.18, 0);
+      g.add(arm);
+      // Glowing yellow bulb sphere
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), Materials.emissiveBulb);
+      bulb.position.set(0.35, 2.05, 0);
+      g.add(bulb);
+      // Lamp shade hat
+      const shade = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.12, 10), Materials.slate);
+      shade.position.set(0.35, 2.15, 0);
+      g.add(shade);
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 2, 0.85, 55, 'Street Lamp');
+    }
+
+    function buildPineTree(x, z) {
+      const g = new THREE.Group();
+      // Wood trunk
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 0.7, 8), Materials.wood);
+      trunk.position.y = 0.35;
+      g.add(trunk);
+      // 3 Stacked Cones in Mint & Forest Green
+      const cone1 = new THREE.Mesh(new THREE.ConeGeometry(0.85, 0.9, 10), Materials.mint);
+      cone1.position.y = 1.0;
+      g.add(cone1);
+      const cone2 = new THREE.Mesh(new THREE.ConeGeometry(0.7, 0.8, 10), Materials.green);
+      cone2.position.y = 1.45;
+      g.add(cone2);
+      const cone3 = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.7, 10), Materials.mint);
+      cone3.position.y = 1.85;
+      g.add(cone3);
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 2, 0.95, 65, 'Toy Pine Tree');
+    }
+
+    function buildCloudTree(x, z) {
+      const g = new THREE.Group();
+      // Trunk
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 1.1, 8), Materials.wood);
+      trunk.position.y = 0.55;
+      g.add(trunk);
+      // Clustered Puffy Cloud Spheres
+      const colors = [Materials.green, Materials.mint, Materials.yellow];
+      const offsets = [
+        [0, 1.4, 0, 0.65],
+        [0.35, 1.3, 0.25, 0.5],
+        [-0.35, 1.35, -0.2, 0.55],
+        [0.2, 1.6, -0.25, 0.5]
+      ];
+      offsets.forEach(([ox, oy, oz, r], i) => {
+        const sph = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), colors[i % 3]);
+        sph.position.set(ox, oy, oz);
+        g.add(sph);
+      });
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 2, 1.05, 75, 'Puffy Cloud Tree');
+    }
+
+    function buildToyCar(x, z, rot = 0, colorMat = Materials.coral) {
+      const g = new THREE.Group();
+      // Lower body
+      const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.36, 0.75), colorMat);
+      chassis.position.y = 0.28;
+      g.add(chassis);
+      // Cabin
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.35, 0.66), colorMat);
+      cabin.position.set(-0.08, 0.55, 0);
+      g.add(cabin);
+      // Windows
+      const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.87, 0.26, 0.68), Materials.glass);
+      windshield.position.set(-0.08, 0.56, 0);
+      g.add(windshield);
+      // Wheels
+      const wheelGeom = new THREE.CylinderGeometry(0.16, 0.16, 0.12, 12);
+      const wheelPos = [
+        [0.45, 0.16, 0.38],
+        [0.45, 0.16, -0.38],
+        [-0.45, 0.16, 0.38],
+        [-0.45, 0.16, -0.38]
+      ];
+      wheelPos.forEach(([wx, wy, wz]) => {
+        const wh = new THREE.Mesh(wheelGeom, Materials.slate);
+        wh.rotation.x = Math.PI / 2;
+        wh.position.set(wx, wy, wz);
+        g.add(wh);
+        // Hubcap
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), Materials.silver);
+        cap.position.set(wx, wy, wz > 0 ? wz + 0.05 : wz - 0.05);
+        g.add(cap);
+      });
+      // Headlights
+      const hl1 = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.06, 8), Materials.emissiveBulb);
+      hl1.rotation.z = Math.PI / 2;
+      hl1.position.set(0.71, 0.32, 0.24);
+      g.add(hl1);
+      const hl2 = hl1.clone();
+      hl2.position.set(0.71, 0.32, -0.24);
+      g.add(hl2);
+
+      g.position.set(x, 0, z);
+      g.rotation.y = rot;
+      return registerProp(g, 2, 1.15, 80, 'Toy Coupe');
+    }
+
+    function buildHotdogCart(x, z, rot = 0) {
+      const g = new THREE.Group();
+      // Cart Body
+      const cart = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.6), Materials.white);
+      cart.position.y = 0.45;
+      g.add(cart);
+      // Wheels
+      const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.08, 12), Materials.coral);
+      wh.rotation.x = Math.PI / 2;
+      wh.position.set(-0.2, 0.25, 0.33);
+      g.add(wh);
+      const wh2 = wh.clone();
+      wh2.position.set(-0.2, 0.25, -0.33);
+      g.add(wh2);
+      // Striped Umbrella Canopy
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.1, 8), Materials.slate);
+      pole.position.set(0.2, 1.0, 0);
+      g.add(pole);
+      const umbrella = new THREE.Mesh(new THREE.ConeGeometry(0.65, 0.25, 12), Materials.yellow);
+      umbrella.position.set(0.2, 1.6, 0);
+      g.add(umbrella);
+
+      g.position.set(x, 0, z);
+      g.rotation.y = rot;
+      return registerProp(g, 2, 1.1, 75, 'Hotdog Cart');
+    }
+
+    // --- TIER 3 PROPS (Medium, Radius 1.6 - 2.6, ~120-200 pts) ---
+    function buildCozyHouse(x, z, rot = 0) {
+      const g = new THREE.Group();
+      // Main Body
+      const walls = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.4, 1.8), Materials.yellow);
+      walls.position.y = 0.7;
+      g.add(walls);
+      // Pitched Roof (Coral red prism)
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(1.6, 0.9, 4), Materials.coral);
+      roof.rotation.y = Math.PI / 4;
+      roof.scale.set(1.1, 1.0, 1.3);
+      roof.position.y = 1.85;
+      g.add(roof);
+      // Front Door (Mint)
+      const door = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.7, 0.06), Materials.mint);
+      door.position.set(0, 0.45, 0.92);
+      g.add(door);
+      // Chimney & Cartoon Smoke Puffs
+      const chim = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 0.3), Materials.wood);
+      chim.position.set(0.6, 2.0, -0.3);
+      g.add(chim);
+      const puff1 = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), Materials.white);
+      puff1.position.set(0.6, 2.4, -0.3);
+      g.add(puff1);
+      const puff2 = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), Materials.white);
+      puff2.position.set(0.65, 2.65, -0.28);
+      g.add(puff2);
+
+      g.position.set(x, 0, z);
+      g.rotation.y = rot;
+      return registerProp(g, 3, 1.85, 140, 'Cozy Cottage');
+    }
+
+    function buildDonutShop(x, z, rot = 0) {
+      const g = new THREE.Group();
+      // Storefront Cube
+      const store = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.5, 2.0), Materials.mint);
+      store.position.y = 0.75;
+      g.add(store);
+      // Glass shop window
+      const win = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.8, 0.08), Materials.glass);
+      win.position.set(0, 0.8, 1.02);
+      g.add(win);
+      // Giant Roof Donut
+      const donut = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.32, 16, 32), Materials.orange);
+      donut.rotation.x = Math.PI / 4;
+      donut.rotation.y = Math.PI / 6;
+      donut.position.set(0, 2.2, 0);
+      g.add(donut);
+      // Pink Frosting layer
+      const frosting = new THREE.Mesh(new THREE.TorusGeometry(0.71, 0.26, 16, 32), Materials.pink);
+      frosting.rotation.x = Math.PI / 4;
+      frosting.rotation.y = Math.PI / 6;
+      frosting.position.set(0, 2.22, 0.02);
+      g.add(frosting);
+
+      g.position.set(x, 0, z);
+      g.rotation.y = rot;
+      return registerProp(g, 3, 2.1, 180, 'Donut Cafe');
+    }
+
+    function buildCityBus(x, z, rot = 0) {
+      const g = new THREE.Group();
+      // Long Bus Body
+      const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.2, 1.0), Materials.yellow);
+      body.position.y = 0.8;
+      g.add(body);
+      // Window Band
+      const windows = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.45, 1.05), Materials.glass);
+      windows.position.y = 0.95;
+      g.add(windows);
+      // 6 Wheels
+      const whPos = [
+        [1.0, 0.22, 0.52], [-0.7, 0.22, 0.52], [-1.2, 0.22, 0.52],
+        [1.0, 0.22, -0.52], [-0.7, 0.22, -0.52], [-1.2, 0.22, -0.52]
+      ];
+      whPos.forEach(([wx, wy, wz]) => {
+        const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.12, 12), Materials.slate);
+        wh.rotation.x = Math.PI / 2;
+        wh.position.set(wx, wy, wz);
+        g.add(wh);
+      });
+
+      g.position.set(x, 0, z);
+      g.rotation.y = rot;
+      return registerProp(g, 3, 2.3, 190, 'City Bus');
+    }
+
+    function buildPlazaFountain(x, z) {
+      const g = new THREE.Group();
+      // Outer circular basin
+      const basin = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.4, 0.4, 24), Materials.white);
+      basin.position.y = 0.2;
+      g.add(basin);
+      // Water pool
+      const water = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, 0.38, 24), Materials.mint);
+      water.position.y = 0.22;
+      g.add(water);
+      // Center pedestal
+      const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 0.9, 16), Materials.white);
+      ped.position.y = 0.65;
+      g.add(ped);
+      // Center spurting water bubbles
+      const bubble1 = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 10), Materials.glass);
+      bubble1.position.y = 1.25;
+      g.add(bubble1);
+      const bubble2 = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), Materials.glass);
+      bubble2.position.y = 1.6;
+      g.add(bubble2);
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 3, 2.5, 200, 'Plaza Fountain');
+    }
+
+    // --- TIER 4 PROPS (Large, Radius 2.8 - 4.4, ~350-500 pts) ---
+    function buildApartmentBlock(x, z, rot = 0) {
+      const g = new THREE.Group();
+      // 4-Story Main Box
+      const tower = new THREE.Mesh(new THREE.BoxGeometry(3.0, 4.6, 2.6), Materials.lavender);
+      tower.position.y = 2.3;
+      g.add(tower);
+      // Modular Balconies
+      for (let floor = 1; floor <= 3; floor++) {
+        const balc = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.4, 0.4), Materials.mint);
+        balc.position.set(0, floor * 1.1 + 0.4, 1.4);
+        g.add(balc);
+      }
+      // Rooftop Elevator Shack & AC Units
+      const shack = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 1.2), Materials.cream);
+      shack.position.set(-0.6, 5.0, 0);
+      g.add(shack);
+      const ac = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.6), Materials.silver);
+      ac.position.set(0.6, 4.8, 0.4);
+      g.add(ac);
+
+      g.position.set(x, 0, z);
+      g.rotation.y = rot;
+      return registerProp(g, 4, 3.4, 380, 'Apartment Complex');
+    }
+
+    function buildClockTower(x, z) {
+      const g = new THREE.Group();
+      // Base
+      const base = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, 2.2), Materials.slate);
+      base.position.y = 0.6;
+      g.add(base);
+      // Shaft
+      const shaft = new THREE.Mesh(new THREE.BoxGeometry(1.8, 5.4, 1.8), Materials.cream);
+      shaft.position.y = 3.9;
+      g.add(shaft);
+      // Clock Stage
+      const clockHead = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.4, 2.2), Materials.coral);
+      clockHead.position.y = 7.3;
+      g.add(clockHead);
+      // Clock Faces (4 sides)
+      const clockFaceGeom = new THREE.CylinderGeometry(0.5, 0.5, 0.06, 16);
+      const cf1 = new THREE.Mesh(clockFaceGeom, Materials.white);
+      cf1.rotation.x = Math.PI / 2;
+      cf1.position.set(0, 7.3, 1.12);
+      g.add(cf1);
+      const cf2 = cf1.clone();
+      cf2.position.set(0, 7.3, -1.12);
+      g.add(cf2);
+      // Peaked Roof Spire
+      const spire = new THREE.Mesh(new THREE.ConeGeometry(1.4, 2.2, 4), Materials.mint);
+      spire.rotation.y = Math.PI / 4;
+      spire.position.y = 9.1;
+      g.add(spire);
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 4, 3.2, 420, 'Grand Clock Tower');
+    }
+
+    function buildWaterTower(x, z) {
+      const g = new THREE.Group();
+      // 4 Angled Legs
+      const legGeom = new THREE.CylinderGeometry(0.08, 0.1, 4.2, 8);
+      const legOffsets = [
+        [1.0, 2.1, 1.0, 0.1, 0.1],
+        [-1.0, 2.1, 1.0, 0.1, -0.1],
+        [1.0, 2.1, -1.0, -0.1, 0.1],
+        [-1.0, 2.1, -1.0, -0.1, -0.1]
+      ];
+      legOffsets.forEach(([lx, ly, lz, rx, rz]) => {
+        const leg = new THREE.Mesh(legGeom, Materials.slate);
+        leg.position.set(lx, ly, lz);
+        leg.rotation.set(rx, 0, rz);
+        g.add(leg);
+      });
+      // Water Barrel
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 2.0, 16), Materials.mint);
+      barrel.position.y = 4.8;
+      g.add(barrel);
+      // Conical Roof
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(1.8, 1.0, 16), Materials.coral);
+      roof.position.y = 6.3;
+      g.add(roof);
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 4, 3.1, 390, 'Water Tower');
+    }
+
+    // --- TIER 5 PROPS (Colossal Megastructures, Radius 5.0 - 7.5, ~800-1500 pts) ---
+    function buildModernSkyscraper(x, z) {
+      const g = new THREE.Group();
+      // Stepped Tower Geometry
+      const b1 = new THREE.Mesh(new THREE.BoxGeometry(3.8, 4.0, 3.4), Materials.slate);
+      b1.position.y = 2.0;
+      g.add(b1);
+      const b2 = new THREE.Mesh(new THREE.BoxGeometry(3.0, 4.5, 2.8), Materials.glass);
+      b2.position.y = 6.25;
+      g.add(b2);
+      const b3 = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3.5, 2.0), Materials.mint);
+      b3.position.y = 10.25;
+      g.add(b3);
+      // Spire & Antenna Mast with Blinking Beacon
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 3.0, 8), Materials.silver);
+      mast.position.y = 13.5;
+      g.add(mast);
+      const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), Materials.coral);
+      beacon.position.y = 15.0;
+      g.add(beacon);
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 5, 5.2, 900, 'Modern Skyscraper');
+    }
+
+    function buildFerrisWheel(x, z) {
+      const g = new THREE.Group();
+      // A-Frame Stands
+      const stand1 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 6.0, 8), Materials.mint);
+      stand1.rotation.z = 0.25;
+      stand1.position.set(-0.8, 3.0, 1.2);
+      g.add(stand1);
+      const stand2 = stand1.clone();
+      stand2.rotation.z = -0.25;
+      stand2.position.set(0.8, 3.0, 1.2);
+      g.add(stand2);
+
+      const stand3 = stand1.clone();
+      stand3.position.z = -1.2;
+      g.add(stand3);
+      const stand4 = stand2.clone();
+      stand4.position.z = -1.2;
+      g.add(stand4);
+
+      // Rotating Wheel Group
+      const wheelGroup = new THREE.Group();
+      wheelGroup.position.y = 5.2;
+
+      // Double Outer Rim
+      const rim1 = new THREE.Mesh(new THREE.TorusGeometry(3.2, 0.12, 12, 32), Materials.coral);
+      rim1.position.z = 0.8;
+      wheelGroup.add(rim1);
+      const rim2 = rim1.clone();
+      rim2.position.z = -0.8;
+      wheelGroup.add(rim2);
+
+      // Spokes & 8 Toy Gondolas
+      const gondolaColors = [Materials.yellow, Materials.mint, Materials.coral, Materials.pink];
+      for (let i = 0; i < 8; i++) {
+        const ang = (i / 8) * Math.PI * 2;
+        // Spoke
+        const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 6.4, 6), Materials.silver);
+        spoke.rotation.z = ang;
+        wheelGroup.add(spoke);
+
+        // Hanging Gondola Box
+        const gondola = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.65, 0.7), gondolaColors[i % 4]);
+        gondola.position.set(Math.cos(ang) * 3.2, Math.sin(ang) * 3.2, 0);
+        wheelGroup.add(gondola);
+      }
+      g.add(wheelGroup);
+      g.userData.wheelGroup = wheelGroup;
+
+      g.position.set(x, 0, z);
+      return registerProp(g, 5, 5.8, 1200, 'Giant Ferris Wheel');
+    }
+
+    /* =====================================================================
+       7. CITY POPULATION & DIORAMA LAYOUT
+       Distributing ~280 props intelligently across suburban & downtown zones
+    ===================================================================== */
+    function populateCityDiorama() {
+      // 1. Central Town Plaza
+      buildPlazaFountain(0, 0);
+      for (let i = 0; i < 8; i++) {
+        const ang = (i / 8) * Math.PI * 2;
+        buildParkBench(Math.cos(ang) * 6.5, Math.sin(ang) * 6.5, ang + Math.PI / 2);
+        buildFlowerBush(Math.cos(ang + 0.3) * 8.5, Math.sin(ang + 0.3) * 8.5);
+        buildRubberDuck(Math.cos(ang + 0.5) * 4.8, Math.sin(ang + 0.5) * 4.8);
+      }
+      buildHotdogCart(5.5, 4.0, -Math.PI / 4);
+      buildHotdogCart(-5.5, -4.0, Math.PI * 0.75);
+
+      // 2. Sidewalks & Street Furniture along Main Avenues
+      const streetCoords = [-38, -26, -14, 14, 26, 38];
+      streetCoords.forEach(pos => {
+        // Hydrants & Cones
+        buildTrafficCone(pos, 3.5);
+        buildTrafficCone(pos + 1.5, 3.5);
+        buildTrafficCone(-3.5, pos);
+        buildFireHydrant(pos, -3.5);
+        buildFireHydrant(3.5, -pos);
+        buildMailbox(-pos, 3.5);
+
+        // Street Lamps
+        buildStreetLamp(pos, 4.5);
+        buildStreetLamp(pos, -4.5);
+        buildStreetLamp(4.5, pos);
+        buildStreetLamp(-4.5, pos);
+
+        // Cars parked along curbs
+        if (Math.abs(pos) > 10) {
+          buildToyCar(pos, 2.2, 0, Materials.coral);
+          buildToyCar(-pos, -2.2, Math.PI, Materials.yellow);
+          buildToyCar(2.2, pos, Math.PI / 2, Materials.mint);
+        }
+      });
+
+      // 3. Residential Suburb (South-West Quadrant)
+      for (let rx = -42; rx <= -16; rx += 13) {
+        for (let rz = 16; rz <= 42; rz += 13) {
+          buildCozyHouse(rx, rz, Math.random() * Math.PI * 2);
+          buildFlowerBush(rx + 2.5, rz - 2.0);
+          buildMailbox(rx - 2.5, rz - 2.5);
+          buildPineTree(rx - 3.0, rz + 3.0);
+        }
+      }
+
+      // 4. Toy Park Nature Reserve (North-East Quadrant)
+      buildFerrisWheel(35, -35);
+      for (let px = 18; px <= 44; px += 10) {
+        for (let pz = -44; pz <= -18; pz += 10) {
+          if (Math.hypot(px - 35, pz - (-35)) > 8) {
+            if ((px + pz) % 2 === 0) {
+              buildPineTree(px + (Math.random() - 0.5) * 3, pz + (Math.random() - 0.5) * 3);
+            } else {
+              buildCloudTree(px + (Math.random() - 0.5) * 3, pz + (Math.random() - 0.5) * 3);
+            }
+            buildParkBench(px - 2.5, pz, Math.random() * Math.PI);
+            buildRubberDuck(px + 1.5, pz + 1.5);
+          }
+        }
+      }
+
+      // 5. Commercial District & Food Stalls (South-East Quadrant)
+      buildDonutShop(20, 20, 0);
+      buildDonutShop(36, 20, Math.PI / 2);
+      buildCityBus(22, 14, 0);
+      buildCityBus(36, 32, Math.PI / 2);
+      buildWaterTower(40, 40);
+
+      for (let cx = 16; cx <= 40; cx += 12) {
+        buildTrafficCone(cx, 16);
+        buildTrafficCone(cx + 1, 16);
+        buildToyCar(cx, 28, Math.random() > 0.5 ? 0 : Math.PI, Materials.mint);
+      }
+
+      // 6. Downtown Skyscraper District (North-West Quadrant)
+      buildClockTower(-22, -22);
+      buildApartmentBlock(-38, -20, 0);
+      buildApartmentBlock(-20, -38, Math.PI / 2);
+      buildModernSkyscraper(-36, -36);
+      buildModernSkyscraper(-16, -36);
+
+      // Extra scatter of tiny tier 1 items to ensure early game instant snacking!
+      for (let i = 0; i < 40; i++) {
+        const sx = (Math.random() - 0.5) * 32;
+        const sz = (Math.random() - 0.5) * 32;
+        if (Math.hypot(sx, sz) > 2.5) {
+          if (i % 3 === 0) buildTrafficCone(sx, sz);
+          else if (i % 3 === 1) buildRubberDuck(sx, sz);
+          else buildFlowerBush(sx, sz);
+        }
+      }
+    }
+
+    populateCityDiorama();
+
+    /* =====================================================================
+       8. HIGH-PERFORMANCE CONFETTI PARTICLE POOL
+       Explodes into colorful upward confetti sparks upon every swallow!
+    ===================================================================== */
+    const CONFETTI_COUNT = 120;
+    const confettiPool = [];
+    const confettiGeom = new THREE.PlaneGeometry(0.22, 0.22);
+    const confettiColors = [
+      new THREE.MeshBasicMaterial({ color: 0xFF5E5B, side: THREE.DoubleSide }),
+      new THREE.MeshBasicMaterial({ color: 0xFFED66, side: THREE.DoubleSide }),
+      new THREE.MeshBasicMaterial({ color: 0x00CECB, side: THREE.DoubleSide }),
+      new THREE.MeshBasicMaterial({ color: 0xF472B6, side: THREE.DoubleSide }),
+      new THREE.MeshBasicMaterial({ color: 0xC084FC, side: THREE.DoubleSide }),
+      new THREE.MeshBasicMaterial({ color: 0xFFFFFF, side: THREE.DoubleSide })
+    ];
+
+    for (let i = 0; i < CONFETTI_COUNT; i++) {
+      const mat = confettiColors[i % confettiColors.length];
+      const mesh = new THREE.Mesh(confettiGeom, mat);
+      mesh.visible = false;
+      scene.add(mesh);
+
+      confettiPool.push({
+        mesh,
+        pos: new THREE.Vector3(),
+        vel: new THREE.Vector3(),
+        rotVel: new THREE.Vector3(),
+        life: 0,
+        maxLife: 1.0,
+        active: false
+      });
+    }
+
+    function spawnConfetti(x, y, z, count = 12, isMega = false) {
+      let spawned = 0;
+      for (let p of confettiPool) {
+        if (!p.active) {
+          p.active = true;
+          p.life = 0;
+          p.maxLife = isMega ? 1.4 : 0.85;
+          p.pos.set(
+            x + (Math.random() - 0.5) * (playerHole.radius * 0.8),
+            y + 0.1,
+            z + (Math.random() - 0.5) * (playerHole.radius * 0.8)
+          );
+          const speed = isMega ? (10 + Math.random() * 10) : (6 + Math.random() * 6);
+          const angle = Math.random() * Math.PI * 2;
+          const spread = Math.random() * (isMega ? 6 : 3.5);
+
+          p.vel.set(
+            Math.cos(angle) * spread,
+            speed,
+            Math.sin(angle) * spread
+          );
+          p.rotVel.set(
+            (Math.random() - 0.5) * 20,
+            (Math.random() - 0.5) * 20,
+            (Math.random() - 0.5) * 20
+          );
+          p.mesh.position.copy(p.pos);
+          p.mesh.scale.set(1, 1, 1);
+          p.mesh.visible = true;
+
+          spawned++;
+          if (spawned >= count) break;
+        }
+      }
+    }
+
+    function updateConfetti(dt) {
+      for (let p of confettiPool) {
+        if (p.active) {
+          p.life += dt;
+          if (p.life >= p.maxLife) {
+            p.active = false;
+            p.mesh.visible = false;
+            continue;
+          }
+          // Physics
+          p.vel.y -= 22 * dt; // Gravity
+          p.vel.x *= 0.96;    // Air drag
+          p.vel.z *= 0.96;
+          p.pos.addScaledVector(p.vel, dt);
+          p.mesh.position.copy(p.pos);
+
+          p.mesh.rotation.x += p.rotVel.x * dt;
+          p.mesh.rotation.y += p.rotVel.y * dt;
+          p.mesh.rotation.z += p.rotVel.z * dt;
+
+          const progress = p.life / p.maxLife;
+          const scale = Math.max(0.01, 1.0 - progress);
+          p.mesh.scale.set(scale, scale, scale);
+        }
+      }
+    }
+
+    /* =====================================================================
+       9. STEERING CONTROLS & CURSOR INTERACTION
+       Smooth mouse cursor / touch drag with velocity inertia
+    ===================================================================== */
+    const mathGroundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const raycaster = new THREE.Raycaster();
+    const mouseNorm = new THREE.Vector2(0, 0);
+    const targetGroundPoint = new THREE.Vector3(0, 0, 0);
+    let isPointerDown = false;
+    let hasPointerMoved = false;
+
+    // Keyboard WASD / Arrows Alternate Support
+    const keys = { w: false, a: false, s: false, d: false };
+
+    function onPointerMove(e) {
+      hasPointerMoved = true;
+      mouseNorm.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouseNorm.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    }
+
+    window.addEventListener('pointerdown', (e) => {
+      sound.init();
+      isPointerDown = true;
+      onPointerMove(e);
+    });
+
+    window.addEventListener('pointermove', onPointerMove);
+
+    window.addEventListener('pointerup', () => {
+      isPointerDown = false;
+    });
+
+    window.addEventListener('keydown', (e) => {
+      sound.init();
+      const k = e.key.toLowerCase();
+      if (k === 'w' || k === 'arrowup') keys.w = true;
+      if (k === 'a' || k === 'arrowleft') keys.a = true;
+      if (k === 's' || k === 'arrowdown') keys.s = true;
+      if (k === 'd' || k === 'arrowright') keys.d = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+      const k = e.key.toLowerCase();
+      if (k === 'w' || k === 'arrowup') keys.w = false;
+      if (k === 'a' || k === 'arrowleft') keys.a = false;
+      if (k === 's' || k === 'arrowdown') keys.s = false;
+      if (k === 'd' || k === 'arrowright') keys.d = false;
+    });
+
+    /* =====================================================================
+       10. GAME STATE & PROGRESSION LOGIC
+    ===================================================================== */
+    let gameState = 'START'; // 'START', 'PLAYING', 'PAUSED', 'GAMEOVER'
+    let gameTimer = 60.0;
+    let timeScale = 1.0;
+    let cameraShake = 0.0;
+
+    const TierConfig = [
+      { tier: 1, name: 'TIER 1: POCKET HOLE', minRad: 1.2, maxRad: 1.8 },
+      { tier: 2, name: 'TIER 2: STREET EATER', minRad: 1.8, maxRad: 3.0 },
+      { tier: 3, name: 'TIER 3: NEIGHBORHOOD VOID', minRad: 3.0, maxRad: 4.8 },
+      { tier: 4, name: 'TIER 4: CITY CRUSHER', minRad: 4.8, maxRad: 7.0 },
+      { tier: 5, name: 'TIER 5: TITANIC ABYSS', minRad: 7.0, maxRad: 12.0 }
+    ];
+
+    const timerDisplay = document.getElementById('timer-display');
+    const timerPill = document.getElementById('timer-pill');
+    const scoreDisplay = document.getElementById('score-display');
+    const comboContainer = document.getElementById('combo-container');
+    const comboText = document.getElementById('combo-text');
+    const megaBanner = document.getElementById('mega-banner');
+    const tierNameLabel = document.getElementById('tier-name');
+    const progressBarInner = document.getElementById('progress-bar-inner');
+
+    function updateHoleTier() {
+      let currentTier = 1;
+      for (let t of TierConfig) {
+        if (playerHole.radius >= t.minRad) {
+          currentTier = t.tier;
+        }
+      }
+
+      if (currentTier !== playerHole.tier) {
+        playerHole.tier = currentTier;
+        sound.playLevelUp();
+        spawnConfetti(playerHole.position.x, 0.5, playerHole.position.z, 30, true);
+        cameraShake = 0.35;
+      }
+
+      const curConfig = TierConfig[playerHole.tier - 1];
+      tierNameLabel.textContent = curConfig.name;
+
+      // Progress bar percentage within tier
+      const span = curConfig.maxRad - curConfig.minRad;
+      const progress = Math.min(1.0, Math.max(0, (playerHole.radius - curConfig.minRad) / span));
+      progressBarInner.style.width = `${Math.round(progress * 100)}%`;
+    }
+
+    function triggerMegaSwallow() {
+      timeScale = 0.22; // Dramatic slow-mo dilation
+      cameraShake = 0.65;
+      sound.playMegaBoom();
+
+      // Trigger 3D ground shockwave
+      shockwaveMesh.position.set(playerHole.position.x, 0.08, playerHole.position.z);
+      shockwaveMesh.scale.set(playerHole.radius, playerHole.radius, playerHole.radius);
+      shockwaveState.active = true;
+      shockwaveState.scale = playerHole.radius;
+      shockwaveState.maxScale = playerHole.radius * 4.2;
+      shockwaveState.opacity = 0.95;
+
+      // Confetti burst
+      spawnConfetti(playerHole.position.x, 0.4, playerHole.position.z, 60, true);
+
+      // Award bonus
+      playerHole.score += 500;
+      scoreDisplay.textContent = playerHole.score;
+
+      // Show Banner
+      megaBanner.classList.add('show');
+      setTimeout(() => {
+        megaBanner.classList.remove('show');
+      }, 1400);
+    }
+
+    function checkSwallowInteractions(dt) {
+      const hx = playerHole.position.x;
+      const hz = playerHole.position.z;
+      const hr = playerHole.radius;
+
+      for (let prop of propsList) {
+        if (prop.state === 'CONSUMED') continue;
+
+        const px = prop.mesh.position.x;
+        const pz = prop.mesh.position.z;
+        const dx = px - hx;
+        const dz = pz - hz;
+        const dist = Math.hypot(dx, dz);
+
+        const canSwallow = (prop.radius <= hr * 0.95);
+
+        // State 1: Inward Wobble & Rim Suction Zone
+        if (prop.state === 'IDLE' || prop.state === 'WOBBLE') {
+          if (canSwallow && dist < hr * 1.45) {
+            prop.state = 'WOBBLE';
+            // Wobble Tilt towards hole center
+            const wIntensity = 1.0 - (dist / (hr * 1.45));
+            const angleToHole = Math.atan2(hz - pz, hx - px);
+
+            prop.mesh.rotation.x = Math.sin(angleToHole) * wIntensity * 0.45 + Math.sin(Date.now() * 0.03 + prop.wobbleOffset) * 0.12;
+            prop.mesh.rotation.z = -Math.cos(angleToHole) * wIntensity * 0.45 + Math.cos(Date.now() * 0.03 + prop.wobbleOffset) * 0.12;
+
+            // Inward gravitational slide
+            prop.mesh.position.x += Math.cos(angleToHole) * wIntensity * 3.5 * dt;
+            prop.mesh.position.z += Math.sin(angleToHole) * wIntensity * 3.5 * dt;
+
+            // Fall into hole trigger!
+            if (dist < hr * 0.75) {
+              prop.state = 'SWALLOWING';
+              prop.fallProgress = 0;
+              sound.playBloop();
+            }
+          } else {
+            // Return to upright resting position
+            prop.state = 'IDLE';
+            prop.mesh.rotation.x = THREE.MathUtils.lerp(prop.mesh.rotation.x, prop.originalRot.x, dt * 8);
+            prop.mesh.rotation.z = THREE.MathUtils.lerp(prop.mesh.rotation.z, prop.originalRot.z, dt * 8);
+
+            // If player rams an object too big for hole, provide rubbery bonk bounce!
+            if (!canSwallow && dist < hr + prop.radius * 0.8) {
+              const pushBack = (hr + prop.radius * 0.8 - dist);
+              const pushAngle = Math.atan2(hz - pz, hx - px);
+              playerHole.position.x += Math.cos(pushAngle) * pushBack * 0.4;
+              playerHole.position.z += Math.sin(pushAngle) * pushBack * 0.4;
+              prop.mesh.rotation.x = (Math.random() - 0.5) * 0.25;
+              sound.playBonk();
+            }
+          }
+        }
+
+        // State 2: Active Spiralling Downward Swallow with Squash & Stretch
+        else if (prop.state === 'SWALLOWING') {
+          prop.fallProgress += dt * 2.2;
+          const fp = prop.fallProgress;
+
+          // Pull towards hole center
+          prop.mesh.position.x = THREE.MathUtils.lerp(prop.mesh.position.x, hx, dt * 10);
+          prop.mesh.position.z = THREE.MathUtils.lerp(prop.mesh.position.z, hz, dt * 10);
+
+          // Accelerate downwards into abyss
+          prop.mesh.position.y -= (4.5 + fp * 15.0) * dt;
+
+          // Spiralling rotation
+          prop.mesh.rotation.y += (12.0 + fp * 20.0) * dt;
+          prop.mesh.rotation.x += 8.0 * dt;
+
+          // Squash & Stretch physics: Stretch along Y, pinch horizontally, then shrink to zero
+          const stretchY = 1.0 + Math.sin(Math.min(fp, 1.0) * Math.PI) * 0.85;
+          const pinchXZ = Math.max(0.02, 1.0 - fp * 0.7);
+          const shrinkOverall = Math.max(0.001, 1.0 - fp);
+
+          prop.mesh.scale.set(
+            prop.originalScale.x * pinchXZ * shrinkOverall,
+            prop.originalScale.y * stretchY * shrinkOverall,
+            prop.originalScale.z * pinchXZ * shrinkOverall
+          );
+
+          // Fully digested!
+          if (fp >= 1.0 || prop.mesh.position.y < -3.5) {
+            prop.state = 'CONSUMED';
+            prop.mesh.visible = false;
+
+            // Score & Combo Progression
+            playerHole.totalSwallowed++;
+            playerHole.combo++;
+            playerHole.comboTimer = 1.4; // 1.4s combo window
+            if (playerHole.combo > playerHole.maxCombo) {
+              playerHole.maxCombo = playerHole.combo;
+            }
+
+            const pointsEarned = prop.points * Math.min(playerHole.combo, 15);
+            playerHole.score += pointsEarned;
+            scoreDisplay.textContent = playerHole.score;
+
+            // Hole Expansion
+            const growthDelta = (0.045 / Math.sqrt(playerHole.radius)) * (prop.tier * 0.85);
+            playerHole.targetRadius += growthDelta;
+            playerHole.largestSwallowed = prop.name;
+
+            // Audio: Melodic ascending pentatonic marimba
+            sound.playMarimba(playerHole.combo);
+
+            // Upward Confetti Sparks
+            spawnConfetti(hx, 0.2, hz, 10 + prop.tier * 4, false);
+
+            // Camera bounce
+            cameraShake = Math.min(0.5, cameraShake + 0.08);
+
+            // Check for MEGA SWALLOW every 10 objects!
+            if (playerHole.totalSwallowed % 10 === 0) {
+              triggerMegaSwallow();
+            }
+
+            // Update UI Combo
+            if (playerHole.combo >= 2) {
+              comboContainer.classList.add('active');
+              comboText.textContent = `COMBO x${playerHole.combo}! +${pointsEarned}`;
+            }
+          }
+        }
+      }
+    }
+
+    /* =====================================================================
+       11. MAIN ANIMATION LOOP & CAMERA LOGIC
+    ===================================================================== */
+    let lastTime = performance.now();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const currentTime = performance.now();
+      let dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+      lastTime = currentTime;
+
+      // Apply slow-mo time dilation recovery
+      dt *= timeScale;
+      timeScale += (1.0 - timeScale) * Math.min(1.0, dt * 3.5);
+
+      if (gameState === 'PLAYING') {
+        // Countdown Timer
+        gameTimer -= dt;
+        if (gameTimer <= 0) {
+          gameTimer = 0;
+          endGame();
+        }
+
+        const sec = Math.ceil(gameTimer);
+        timerDisplay.textContent = `${sec}s`;
+        if (sec <= 10) {
+          timerPill.classList.add('urgent');
+        } else {
+          timerPill.classList.remove('urgent');
+        }
+
+        // Combo decay timer
+        if (playerHole.comboTimer > 0) {
+          playerHole.comboTimer -= dt;
+          if (playerHole.comboTimer <= 0) {
+            playerHole.combo = 0;
+            comboContainer.classList.remove('active');
+          }
+        }
+
+        // Steer hole towards cursor intersection with ground
+        raycaster.setFromCamera(mouseNorm, camera);
+        if (raycaster.ray.intersectPlane(mathGroundPlane, targetGroundPoint)) {
+          // If mouse/touch is being used or cursor is in window
+          const toTarget = new THREE.Vector3().subVectors(targetGroundPoint, playerHole.position);
+          toTarget.y = 0;
+          const dist = toTarget.length();
+
+          if (dist > 0.08) {
+            const maxSpeed = 16.0 + playerHole.radius * 0.8;
+            const targetVel = toTarget.normalize().multiplyScalar(Math.min(maxSpeed, dist * 8.5));
+            playerHole.velocity.lerp(targetVel, 1.0 - Math.exp(-12 * dt));
+          } else {
+            playerHole.velocity.lerp(new THREE.Vector3(0, 0, 0), 1.0 - Math.exp(-10 * dt));
+          }
+        }
+
+        // Keyboard WASD Override if pressed
+        const moveVec = new THREE.Vector3(0, 0, 0);
+        if (keys.w) moveVec.z -= 1;
+        if (keys.s) moveVec.z += 1;
+        if (keys.a) moveVec.x -= 1;
+        if (keys.d) moveVec.x += 1;
+        if (moveVec.lengthSq() > 0) {
+          moveVec.normalize().multiplyScalar(18.0 + playerHole.radius * 0.8);
+          playerHole.velocity.lerp(moveVec, 1.0 - Math.exp(-14 * dt));
+        }
+
+        // Move Hole with Velocity Inertia
+        playerHole.position.addScaledVector(playerHole.velocity, dt);
+
+        // Clamp to city boundaries
+        playerHole.position.x = THREE.MathUtils.clamp(playerHole.position.x, -52, 52);
+        playerHole.position.z = THREE.MathUtils.clamp(playerHole.position.z, -52, 52);
+
+        // Smooth Hole Growth Expansion
+        playerHole.radius = THREE.MathUtils.lerp(playerHole.radius, playerHole.targetRadius, dt * 5.0);
+        updateHoleTier();
+
+        // Update Ground Cutout Shader Uniforms
+        if (groundMaterial.userData.shader) {
+          groundMaterial.userData.shader.uniforms.uHolePos.value.set(
+            playerHole.position.x,
+            playerHole.position.z
+          );
+          groundMaterial.userData.shader.uniforms.uHoleRadius.value = playerHole.radius;
+        }
+
+        // Update Hole Visual Meshes
+        rimMesh.position.set(playerHole.position.x, 0.06, playerHole.position.z);
+        rimMesh.scale.set(playerHole.radius, playerHole.radius, playerHole.radius);
+
+        innerRingMesh.position.set(playerHole.position.x, 0.03, playerHole.position.z);
+        innerRingMesh.scale.set(playerHole.radius, playerHole.radius, playerHole.radius);
+        innerRingMesh.rotation.z += dt * 3.5; // Animated swirling suction disk
+
+        voidPitMesh.position.set(playerHole.position.x, -3.5, playerHole.position.z);
+        voidPitMesh.scale.set(playerHole.radius, 1.0, playerHole.radius);
+
+        // Update Active Swallows
+        checkSwallowInteractions(dt);
+      }
+
+      // Shockwave Expansion
+      if (shockwaveState.active) {
+        shockwaveState.scale += (shockwaveState.maxScale - shockwaveState.scale) * dt * 5.5;
+        shockwaveState.opacity -= dt * 1.5;
+        shockwaveMesh.scale.set(shockwaveState.scale, shockwaveState.scale, 1);
+        shockwaveMat.opacity = Math.max(0, shockwaveState.opacity);
+        if (shockwaveState.opacity <= 0.01) {
+          shockwaveState.active = false;
+        }
+      }
+
+      // Rotate Ferris Wheel
+      for (let prop of propsList) {
+        if (prop.mesh.userData.wheelGroup) {
+          prop.mesh.userData.wheelGroup.rotation.z += dt * 0.45;
+        }
+      }
+
+      // Update Confetti
+      updateConfetti(dt);
+
+      // Camera: High-angle 50-degree isometric follow camera with exponential damping zoom
+      const baseDistance = 16.0;
+      const zoomDistance = baseDistance + (playerHole.radius - 1.2) * 3.6;
+      const pitch = 50 * (Math.PI / 180);
+
+      const camY = zoomDistance * Math.sin(pitch);
+      const camZ = zoomDistance * Math.cos(pitch);
+      const camX = zoomDistance * 0.35; // Isometric diagonal offset
+
+      const targetCamPos = new THREE.Vector3(
+        playerHole.position.x + camX,
+        camY,
+        playerHole.position.z + camZ
+      );
+
+      // Screen Shake application
+      if (cameraShake > 0.01) {
+        targetCamPos.x += (Math.random() - 0.5) * cameraShake * 2.0;
+        targetCamPos.y += (Math.random() - 0.5) * cameraShake * 2.0;
+        targetCamPos.z += (Math.random() - 0.5) * cameraShake * 2.0;
+        cameraShake *= Math.exp(-10 * dt);
+      }
+
+      camera.position.lerp(targetCamPos, 1.0 - Math.exp(-6.5 * dt));
+      cameraTarget.lerp(playerHole.position, 1.0 - Math.exp(-8.0 * dt));
+      camera.lookAt(cameraTarget);
+
+      renderer.render(scene, camera);
+    }
+
+    /* =====================================================================
+       12. GAME FLOW, RESTART & MODAL UI CONTROLLERS
+    ===================================================================== */
+    const startModal = document.getElementById('start-modal');
+    const gameOverModal = document.getElementById('game-over-modal');
+    const btnStart = document.getElementById('btn-start');
+    const btnReplay = document.getElementById('btn-replay');
+    const btnAudio = document.getElementById('btn-audio');
+    const btnPause = document.getElementById('btn-pause');
+
+    btnStart.addEventListener('click', () => {
+      sound.init();
+      startModal.classList.add('hidden');
+      gameState = 'PLAYING';
+    });
+
+    btnReplay.addEventListener('click', () => {
+      sound.init();
+      resetGame();
+      gameOverModal.classList.add('hidden');
+      gameState = 'PLAYING';
+    });
+
+    btnAudio.addEventListener('click', () => {
+      sound.init();
+      const muted = sound.toggleMute();
+      btnAudio.textContent = muted ? '🔇' : '🔊';
+    });
+
+    btnPause.addEventListener('click', () => {
+      if (gameState === 'PLAYING') {
+        gameState = 'PAUSED';
+        btnPause.textContent = '▶️';
+      } else if (gameState === 'PAUSED') {
+        gameState = 'PLAYING';
+        btnPause.textContent = '⏸️';
+      }
+    });
+
+    function resetGame() {
+      gameTimer = 60.0;
+      timeScale = 1.0;
+      cameraShake = 0.0;
+
+      playerHole.position.set(0, 0, 0);
+      playerHole.velocity.set(0, 0, 0);
+      playerHole.radius = 1.2;
+      playerHole.targetRadius = 1.2;
+      playerHole.tier = 1;
+      playerHole.score = 0;
+      playerHole.combo = 0;
+      playerHole.maxCombo = 0;
+      playerHole.totalSwallowed = 0;
+      playerHole.largestSwallowed = 'Traffic Cone';
+
+      scoreDisplay.textContent = '0';
+      timerDisplay.textContent = '60s';
+      timerPill.classList.remove('urgent');
+      comboContainer.classList.remove('active');
+
+      // Reset all props back onto the diorama
+      for (let prop of propsList) {
+        prop.state = 'IDLE';
+        prop.fallProgress = 0;
+        prop.mesh.position.copy(prop.originalPos);
+        prop.mesh.rotation.copy(prop.originalRot);
+        prop.mesh.scale.copy(prop.originalScale);
+        prop.mesh.visible = true;
+      }
+
+      // Reset hole visuals
+      rimMesh.position.set(0, 0.06, 0);
+      rimMesh.scale.set(1.2, 1.2, 1.2);
+      innerRingMesh.position.set(0, 0.03, 0);
+      innerRingMesh.scale.set(1.2, 1.2, 1.2);
+      voidPitMesh.position.set(0, -3.5, 0);
+      voidPitMesh.scale.set(1.2, 1.0, 1.2);
+
+      updateHoleTier();
+    }
+
+    function endGame() {
+      gameState = 'GAMEOVER';
+
+      document.getElementById('stat-final-score').textContent = playerHole.score.toLocaleString();
+      document.getElementById('stat-eaten').textContent = playerHole.totalSwallowed;
+      document.getElementById('stat-combo').textContent = `x${playerHole.maxCombo}`;
+      document.getElementById('stat-tier').textContent = `Tier ${playerHole.tier}`;
+
+      // Star rating calculation
+      const starSpan = document.getElementById('star-rating');
+      let stars = '⭐';
+      let verdict = 'NEAT NIBBLER!';
+      if (playerHole.score >= 12000) {
+        stars = '⭐⭐⭐';
+        verdict = 'TITANIC CITY CRUSHER!';
+      } else if (playerHole.score >= 5000) {
+        stars = '⭐⭐';
+        verdict = 'SUBURBAN BLACK HOLE!';
+      }
+      starSpan.innerHTML = stars;
+      document.getElementById('game-over-verdict').textContent = verdict;
+
+      gameOverModal.classList.remove('hidden');
+    }
+
+    // Responsive Window Resize Handler
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    // Start Simulation Loop
+    animate();
+  </script>
+</body>
+</html>
